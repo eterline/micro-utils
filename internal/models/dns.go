@@ -1,3 +1,8 @@
+// Copyright (c) 2025 EterLine (Andrew)
+// This file is part of My-Go-Project.
+// Licensed under the MIT License. See the LICENSE file for details.
+
+
 package models
 
 import (
