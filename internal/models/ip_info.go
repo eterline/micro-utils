@@ -44,3 +44,11 @@ func (ip AboutIPobject) MapLinks() map[string]string {
 		"yandex": fmt.Sprintf("https://yandex.com/maps/?ll=%f,%f&z=12", ip.Lon, ip.Lat),
 	}
 }
+
+type DnsProviderType string
+
+const (
+	DnsCloudflareProvider DnsProviderType = "cloudflare"
+	DnsGoogleProvider     DnsProviderType = "google"
+	DnsLocalProvider      DnsProviderType = "local"
+)
