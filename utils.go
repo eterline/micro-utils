@@ -1,15 +1,18 @@
 // Copyright (c) 2025 EterLine (Andrew)
-// This file is part of My-Go-Project.
+// This file is part of micro-utils.
 // Licensed under the MIT License. See the LICENSE file for details.
-
 
 package microutils
 
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
+	"regexp"
+	"strconv"
 
+	"golang.org/x/exp/constraints"
 	"gopkg.in/yaml.v3"
 )
 
@@ -103,4 +106,49 @@ func PrintYaml(v any) (err error) {
 
 	_, err = fmt.Print(string(data))
 	return
+}
+
+func Clamp[T constraints.Ordered](x, min, max T) T {
+	if x < min {
+		return min
+	}
+	if x > max {
+		return max
+	}
+	return x
+}
+
+var domainRegex = regexp.MustCompile(`^(?i:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?i:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$`)
+
+func IsAddressString(s string) bool {
+	host := s
+
+	h, port, err := net.SplitHostPort(s)
+	if err == nil {
+		host = h
+	}
+
+	if port != "" {
+		p, err := strconv.ParseInt(port, 10, 16)
+		if err != nil {
+			return false
+		}
+
+		if p < 0 || p > 65_535 {
+			return false
+		}
+	}
+
+	if ip := net.ParseIP(host); ip != nil {
+		if ip.To4() != nil {
+			return true
+		}
+		return true
+	}
+
+	if len(host) > 0 && len(host) <= 253 && domainRegex.MatchString(host) {
+		return true
+	}
+
+	return false
 }

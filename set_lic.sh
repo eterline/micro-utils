@@ -2,9 +2,10 @@
 
 name="EterLine (Andrew)"
 year="2025"
+project="micro-utils"
 
 LICENSE_TEXT="// Copyright (c) $year $name
-// This file is part of My-Go-Project.
+// This file is part of $project.
 // Licensed under the MIT License. See the LICENSE file for details.
 
 "

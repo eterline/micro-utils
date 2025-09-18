@@ -1,68 +1,73 @@
 // Copyright (c) 2025 EterLine (Andrew)
-// This file is part of My-Go-Project.
+// This file is part of micro-utils.
 // Licensed under the MIT License. See the LICENSE file for details.
 
 
 package main
 
 import (
-	"fmt"
-	"os"
+	"context"
+	"errors"
 
 	microutils "github.com/eterline/micro-utils"
-	"github.com/eterline/micro-utils/cmd/seeip/seeip"
-	"gopkg.in/yaml.v3"
+	ipDataAdapters "github.com/eterline/micro-utils/internal/adapters/ipdata"
+	"github.com/eterline/micro-utils/internal/config/cfgutil"
+	"github.com/eterline/micro-utils/internal/config/seeip"
+	"github.com/eterline/micro-utils/internal/models"
+	ipDataService "github.com/eterline/micro-utils/internal/services/ipdata"
 )
 
 var (
-	cfg = seeip.Configuration{
-		Address:    []string{},
-		MapUrl:     false,
-		JsonFormat: false,
-		Pretty:     false,
-		GeoStamp:   false,
+	initArgs = cfgutil.UsualConfig[seeip.Configuration]{
+		Config: &seeip.Configuration{
+			Address:         []string{},
+			IsJson:          false,
+			Pretty:          false,
+			ResolverService: "local",
+		},
+		Name: "seeip",
 	}
 )
 
 func main() {
 
-	err := seeip.ParseArgs(&cfg)
+	cfg, err := initArgs.ParseArgs()
 	if err != nil {
 		microutils.PrintFatalErr(err)
 	}
 
-	resolved, err := seeip.ResolveHost(cfg.Address...)
+	rslv, err := selectResolver(cfg.ResolverService)
 	if err != nil {
 		microutils.PrintFatalErr(err)
 	}
 
-	infoSet := seeip.GetInfos(resolved, cfg.GeoStamp)
+	scr := ipDataService.NewNetworkScrapeService(rslv, cfg.Workers)
+	about := scr.ResolveDNS(context.Background(), cfg.Address)
 
-	if cfg.JsonFormat {
-		microutils.PrintJSON(cfg.Pretty, infoSet)
-		os.Exit(0)
+	if cfg.IsJson {
+		microutils.PrintJSON(cfg.Pretty, about)
+		return
 	}
 
-	PrintSetText(infoSet)
+	microutils.PrintYaml(about)
 }
 
-func ResolveHostList(hostnames ...string) []seeip.LookupTable {
+func selectResolver(name string) (models.Resolver, error) {
+	switch {
 
-	set := []seeip.LookupTable{}
+	case name == "cloudflare":
+		return ipDataAdapters.NewCloudflareResolver(), nil
 
-	for _, host := range hostnames {
-		lookups, err := seeip.ResolveHost(host)
-		if err != nil {
-			microutils.PrintErr(err)
-			continue
-		}
-		set = append(set, lookups...)
+	case name == "google":
+		return ipDataAdapters.NewGoogleResolver(), nil
+
+	case name == "local":
+		return ipDataAdapters.NewLocalResolver(), nil
+
+	case microutils.IsAddressString(name):
+		return ipDataAdapters.NewRemoteResolver(name), nil
+
+	default:
+		return nil, errors.New("unknown DNS resolver name")
 	}
-
-	return set
-}
-
-func PrintSetText(infoSet seeip.ResolvedInfos) {
-	b, _ := yaml.Marshal(infoSet)
-	fmt.Println(string(b))
 }

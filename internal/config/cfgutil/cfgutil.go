@@ -3,7 +3,7 @@
 // Licensed under the MIT License. See the LICENSE file for details.
 
 
-package conf
+package cfgutil
 
 import (
 	"os"
@@ -12,38 +12,41 @@ import (
 	"github.com/alexflint/go-arg"
 )
 
-type Configuration struct {
-	Listen      string   `arg:"-l,--listen" help:"Listen connection addr"`
-	FilterWords []string `arg:"-f,--filter" help:"Words in packets that will trigger scanner"`
+type UsualConfig[T any] struct {
+	Config *T
+	Name   string
 }
 
-var (
-	parserConfig = arg.Config{
-		Program:           selfExec(),
+func (uc *UsualConfig[T]) ParseArgs() (T, error) {
+
+	parserConfig := arg.Config{
+		Program:           uc.Name,
 		IgnoreEnv:         false,
 		IgnoreDefault:     false,
 		StrictSubcommands: true,
 	}
-)
 
-func ParseArgs(c *Configuration) error {
-	p, err := arg.NewParser(parserConfig, c)
+	p, err := arg.NewParser(parserConfig, uc.Config)
 	if err != nil {
-		return err
+		return *new(T), err
 	}
 
 	err = p.Parse(os.Args[1:])
-	if err == arg.ErrHelp {
+	switch err {
+	case arg.ErrHelp:
 		p.WriteHelp(os.Stdout)
 		os.Exit(1)
+	case nil:
+		return *uc.Config, nil
 	}
-	return err
+
+	return *new(T), err
 }
 
-func selfExec() string {
+func (uc *UsualConfig[T]) selfExec() string {
 	exePath, err := os.Executable()
 	if err != nil {
-		return "monita"
+		return uc.Name
 	}
 
 	return filepath.Base(exePath)

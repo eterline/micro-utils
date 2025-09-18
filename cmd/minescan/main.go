@@ -1,5 +1,5 @@
 // Copyright (c) 2025 EterLine (Andrew)
-// This file is part of My-Go-Project.
+// This file is part of micro-utils.
 // Licensed under the MIT License. See the LICENSE file for details.
 
 

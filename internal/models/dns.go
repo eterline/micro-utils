@@ -1,5 +1,5 @@
 // Copyright (c) 2025 EterLine (Andrew)
-// This file is part of My-Go-Project.
+// This file is part of micro-utils.
 // Licensed under the MIT License. See the LICENSE file for details.
 
 
@@ -7,71 +7,17 @@ package models
 
 import (
 	"context"
-	"strings"
-	"vendor/golang.org/x/net/idna"
+	"net"
 )
 
-// Domain - dns query domain
-type Domain string
-
-// Type - dns query type
-type DnsRecordType string
-
-func (t DnsRecordType) String() string {
-	return string(t)
+type Resolver interface {
+	ResolveIP(ctx context.Context, s string) ([]net.IP, error)
+	ResolveNS(ctx context.Context, s string) ([]string, error)
 }
 
-// Question - dns query question
-type Question struct {
-	Name string `json:"name"`
-	Type int    `json:"type"`
-}
-
-// Answer - dns query answer
-type Answer struct {
-	Name string `json:"name"`
-	Type int    `json:"type"`
-	TTL  int    `json:"TTL"`
-	Data string `json:"data"`
-}
-
-// Response - dns query response
-type DnsResponse struct {
-	Status   int        `json:"Status"`
-	TC       bool       `json:"TC"`
-	RD       bool       `json:"RD"`
-	RA       bool       `json:"RA"`
-	AD       bool       `json:"AD"`
-	CD       bool       `json:"CD"`
-	Question []Question `json:"Question"`
-	Answer   []Answer   `json:"Answer"`
-}
-
-// Supported dns query type
-var (
-	TypeA     = DnsRecordType("A")
-	TypeAAAA  = DnsRecordType("AAAA")
-	TypeCNAME = DnsRecordType("CNAME")
-	TypeMX    = DnsRecordType("MX")
-	TypeTXT   = DnsRecordType("TXT")
-	TypeSPF   = DnsRecordType("SPF")
-	TypeNS    = DnsRecordType("NS")
-	TypeSOA   = DnsRecordType("SOA")
-	TypePTR   = DnsRecordType("PTR")
-	TypeANY   = DnsRecordType("ANY")
-)
-
-// Punycode - returns punycode of domain
-func (d Domain) Punycode() (string, error) {
-	name := strings.TrimSpace(string(d))
-
-	return idna.New(
-		idna.MapForLookup(),
-		idna.Transitional(true),
-		idna.StrictDomainName(false),
-	).ToASCII(name)
-}
-
-type ProviderDoH interface {
-	Query(ctx context.Context, d Domain, t DnsRecordType) (DnsResponse, error)
+type AboutResolve struct {
+	IPs         []net.IP `json:"ip,omitempty" yaml:"ip,omitempty,omitempty"`
+	NameServers []string `json:"ns,omitempty" yaml:"ns,omitempty,omitempty"`
+	ErrorIPs    string   `json:"ip_error,omitempty" yaml:"ip_error,omitempty"`
+	ErrorNS     string   `json:"ns_error,omitempty" yaml:"ns_error,omitempty"`
 }
