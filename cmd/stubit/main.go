@@ -2,7 +2,6 @@
 // This file is part of micro-utils.
 // Licensed under the MIT License. See the LICENSE file for details.
 
-
 package main
 
 import (
@@ -26,7 +25,7 @@ type (
 
 var (
 	cfg = &microutils.UsualConfig[StubCfg]{
-		Config: StubCfg{
+		Config: &StubCfg{
 			Listen: ":80",
 		},
 	}
@@ -61,7 +60,7 @@ func main() {
 	slog.Info("start service")
 	defer slog.Info("exiting service")
 
-	argConf, err := cfg.ParseArgs("stubit")
+	argConf, err := cfg.ParseArgs()
 	if err != nil {
 		slog.Error("arg parse error", "error", err.Error())
 		return
@@ -69,7 +68,7 @@ func main() {
 
 	slog.Info("http wed server started", "listen", argConf.Listen)
 
-	if err := runServer(argConf); err != nil {
+	if err := runServer(&argConf); err != nil {
 		slog.Error("server error", "error", err.Error())
 		return
 	}

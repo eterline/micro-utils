@@ -2,7 +2,6 @@
 // This file is part of micro-utils.
 // Licensed under the MIT License. See the LICENSE file for details.
 
-
 package ipdata
 
 import (
@@ -25,7 +24,7 @@ func NewExternalApi() *IpInfoExternalApi {
 	}
 }
 
-func (ea *IpInfoExternalApi) GetData(ip net.IP) (models.AboutIPobject, error) {
+func (ea *IpInfoExternalApi) ResumeIP(ip net.IP) (models.AboutIPobject, error) {
 
 	api := fmt.Sprintf("http://ip-api.com/json/%s?fields=66846719", ip.String())
 

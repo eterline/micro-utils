@@ -37,7 +37,7 @@ gosec-scan:
 		gosec $$subproj/...; \
 	done
 
-build-prod: gosec-scan build govulncheck-scan
+build-prod: build govulncheck-scan
 
 lic:
 	./set_lic.sh

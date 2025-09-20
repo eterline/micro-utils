@@ -2,7 +2,6 @@
 // This file is part of micro-utils.
 // Licensed under the MIT License. See the LICENSE file for details.
 
-
 package ipdata
 
 import (
@@ -11,6 +10,8 @@ import (
 	"fmt"
 	"net"
 	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/eterline/micro-utils/internal/models"
 )
@@ -21,10 +22,15 @@ type IpInfoSqlite struct {
 	getPrep  *sql.Stmt
 }
 
-func NewIpInfoSqlite(ctx context.Context, db *sql.DB) (*IpInfoSqlite, error) {
-	self := &IpInfoSqlite{
-		db: db,
+func NewIpInfoSqlite(ctx context.Context, db string) (*IpInfoSqlite, error) {
+	self := &IpInfoSqlite{}
+
+	sqlite, err := sql.Open("sqlite3", db)
+	if err != nil {
+		return nil, err
 	}
+
+	self.db = sqlite
 
 	if err := self.checkMigrate(ctx); err != nil {
 		return nil, err
@@ -67,12 +73,16 @@ func (d *IpInfoSqlite) checkMigrate(ctx context.Context) error {
 		request_time   TIMESTAMP
     );`)
 
-	return fmt.Errorf("failed migrate ip_data: %w", err)
+	if err != nil {
+		return fmt.Errorf("failed migrate ip_data: %w", err)
+	}
+
+	return nil
 }
 
 func (d *IpInfoSqlite) prepareExec() error {
 	savePrep, err := d.db.Prepare(`
-	INSERT INTO ip_info (
+	INSERT INTO ip_data (
 		ip, status, continent, continent_code, country, country_code,
 		region, region_name, city, district, zip,
 		lat, lon, timezone, offset, currency, isp, org, as_field, asname,
@@ -116,7 +126,7 @@ func (d *IpInfoSqlite) prepareExec() error {
                region, region_name, city, district, zip,
                lat, lon, timezone, offset, currency, isp, org, as_field, asname,
                reverse, mobile, proxy, hosting, request_time
-        FROM ip_info
+        FROM ip_data
         WHERE ip = ?
         AND (? - request_time) <= ?;
     `)
@@ -129,9 +139,9 @@ func (d *IpInfoSqlite) prepareExec() error {
 	return err
 }
 
-func (d *IpInfoSqlite) Save(ctx context.Context, obj models.AboutIPobject) error {
+func (d *IpInfoSqlite) Save(ctx context.Context, ip net.IP, obj models.AboutIPobject) error {
 	_, err := d.savePrep.ExecContext(ctx,
-		&obj.Status, &obj.Continent, &obj.ContinentCode, &obj.Country, &obj.CountryCode,
+		ip, &obj.Status, &obj.Continent, &obj.ContinentCode, &obj.Country, &obj.CountryCode,
 		&obj.Region, &obj.RegionName, &obj.City, &obj.District, &obj.Zip, &obj.Lat, &obj.Lon,
 		&obj.Timezone, &obj.Offset, &obj.Currency, &obj.Isp, &obj.Org, &obj.As, &obj.Asname,
 		&obj.Reverse, &obj.Mobile, &obj.Proxy, &obj.Hosting, &obj.RequestTime,
@@ -144,12 +154,14 @@ func (d *IpInfoSqlite) Get(ctx context.Context, ip net.IP) (*models.AboutIPobjec
 	maxAge := 30 * time.Minute
 	row := d.getPrep.QueryRowContext(ctx, ip, now, maxAge.Seconds())
 
+	var ipNew net.IP = ip
+
 	obj := &models.AboutIPobject{}
 	err := row.Scan(
 		&obj.Status, &obj.Continent, &obj.ContinentCode, &obj.Country, &obj.CountryCode,
 		&obj.Region, &obj.RegionName, &obj.City, &obj.District, &obj.Zip, &obj.Lat, &obj.Lon,
 		&obj.Timezone, &obj.Offset, &obj.Currency, &obj.Isp, &obj.Org, &obj.As, &obj.Asname,
-		&obj.Reverse, &obj.Mobile, &obj.Proxy, &obj.Hosting, &obj.RequestTime,
+		&obj.Reverse, &obj.Mobile, &obj.Proxy, &obj.Hosting, &obj.RequestTime, &ipNew,
 	)
 
 	if err == sql.ErrNoRows {

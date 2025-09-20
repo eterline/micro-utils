@@ -2,11 +2,11 @@
 // This file is part of micro-utils.
 // Licensed under the MIT License. See the LICENSE file for details.
 
-
 package models
 
 import (
 	"fmt"
+	"net"
 	"time"
 )
 
@@ -15,6 +15,13 @@ AboutIPobject - response ip info object
 
 	More about: https://ip-api.com/docs/api:json
 */
+
+type ResumeAboutIP struct {
+	RequestIP net.IP        `json:"request_ip" yaml:"request_ip"`
+	Resume    AboutIPobject `json:"resume,omitempty" yaml:"resume,omitempty"`
+	Err       string        `json:"error,omitempty" yaml:"error,omitempty"`
+}
+
 type AboutIPobject struct {
 	Status        string    `json:"status" yaml:"status"`
 	Continent     string    `json:"continent" yaml:"continent"`
@@ -24,7 +31,7 @@ type AboutIPobject struct {
 	Region        string    `json:"region" yaml:"region"`
 	RegionName    string    `json:"regionName" yaml:"regionName"`
 	City          string    `json:"city" yaml:"city"`
-	District      string    `json:"district" yaml:"district"`
+	District      string    `json:"district" yaml:"districresumet"`
 	Zip           string    `json:"zip" yaml:"zip"`
 	Lat           float64   `json:"lat" yaml:"lat"`
 	Lon           float64   `json:"lon" yaml:"lon"`
@@ -50,10 +57,6 @@ func (ip AboutIPobject) MapLinks() map[string]string {
 	}
 }
 
-type DnsProviderType string
-
-const (
-	DnsCloudflareProvider DnsProviderType = "cloudflare"
-	DnsGoogleProvider     DnsProviderType = "google"
-	DnsLocalProvider      DnsProviderType = "local"
-)
+type ResumerIP interface {
+	ResumeIP(ip net.IP) (AboutIPobject, error)
+}

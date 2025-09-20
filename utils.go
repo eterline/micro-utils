@@ -10,11 +10,20 @@ import (
 	"net"
 	"os"
 	"regexp"
+	"runtime"
 	"strconv"
 
 	"golang.org/x/exp/constraints"
 	"gopkg.in/yaml.v3"
 )
+
+var (
+	cpuCountAtStart = 0
+)
+
+func init() {
+	cpuCountAtStart = runtime.NumCPU()
+}
 
 const (
 	prefixB  = "Bytes"
@@ -118,6 +127,22 @@ func Clamp[T constraints.Ordered](x, min, max T) T {
 	return x
 }
 
+/*
+	 InitWorkersCount - get maximum gorutines workers count in one time.
+		Calculates from 1 as minimum, `i` as wanted and runtime.NumCPU() as maximum from at starting program moment.
+*/
+func InitWorkersCount(i int) int {
+	return Clamp(i, 1, cpuCountAtStart)
+}
+
+/*
+	 InitWorkersCountCurrently - get maximum gorutines workers count in one time.
+		Calculates from 1 as minimum, `i` as wanted and runtime.NumCPU() as maximum from actual time.
+*/
+func InitWorkersCountCurrently(i int) int {
+	return Clamp(i, 1, runtime.NumCPU())
+}
+
 var domainRegex = regexp.MustCompile(`^(?i:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\.(?i:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?))*$`)
 
 func IsAddressString(s string) bool {
@@ -151,4 +176,36 @@ func IsAddressString(s string) bool {
 	}
 
 	return false
+}
+
+type TicketPool struct {
+	ticketCh chan struct{}
+}
+
+func NewTicketPool(workers int) *TicketPool {
+	if workers < 0 {
+		workers = 1
+	}
+
+	return &TicketPool{
+		ticketCh: make(chan struct{}, workers),
+	}
+}
+
+func (tp *TicketPool) PutTicket() {
+	if tp.ticketCh == nil {
+		panic("use of closed workers ticket pool")
+	}
+	<-tp.ticketCh
+}
+
+func (tp *TicketPool) CatchTicket() {
+	if tp.ticketCh == nil {
+		panic("use of closed workers ticket pool")
+	}
+	tp.ticketCh <- struct{}{}
+}
+
+func (tp *TicketPool) ClosePool() {
+	close(tp.ticketCh)
 }
