@@ -50,7 +50,7 @@ Options:
 
 Exampled output:
 ```
-user@host~#: seeip -a google.com -r google
+user@host~# seeip -a google.com -r google
 
 google.com:
     resolve_duration_ms: 504
@@ -113,7 +113,33 @@ google.com:
 ```
 
 ### filehash:
-Later...
+Tool for file hash calc. (Multi-thread working)
+#### Hash types
+- SHA256
+- SHA1
+- MD5
+
+```
+Usage: filehash [--file FILE] [--json] [--pretty]
+
+Options:
+  --file FILE, -f FILE   Target file
+  --json, -j             JSON output format
+  --pretty, -p           JSON output pretty style
+  --help, -h             display this help and exit
+```
+
+Exampled output:
+```
+user@host~# filehash -f .bashrc
+
+Target file: .bashrc
+File size: 185.0000 B
+===========================
+ SHA256 = cd107f934b472a5d7efaca5af25cca5b64c4da59b49b66ed34400e8982f077ff
+ SHA1   = d767be47298f160a41cfb5585a4c22f66b5e8776
+ MD5    = d2f9f9f9bea5746979fba64a43797f2e
+```
 
 ### gpufo:
 Later...
