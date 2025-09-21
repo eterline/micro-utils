@@ -16,6 +16,7 @@ find . -type f -name "*.go" | while read -r file; do
         echo "$LICENSE_TEXT" > "$tmpfile"
         cat "$file" >> "$tmpfile"
         mv "$tmpfile" "$file"
+        go fmt $file
         echo "LICENSE added to: $file"
     fi
 done

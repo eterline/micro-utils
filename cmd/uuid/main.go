@@ -2,7 +2,6 @@
 // This file is part of micro-utils.
 // Licensed under the MIT License. See the LICENSE file for details.
 
-
 package main
 
 import (
