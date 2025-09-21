@@ -46,7 +46,7 @@ type AboutIPobject struct {
 	Mobile        bool      `json:"mobile" yaml:"mobile"`
 	Proxy         bool      `json:"proxy" yaml:"proxy"`
 	Hosting       bool      `json:"hosting" yaml:"hosting"`
-	RequestTime   time.Time `json:"-"`
+	RequestTime   time.Time `json:"-" yaml:"-"`
 }
 
 func (ip AboutIPobject) MapLinks() map[string]string {

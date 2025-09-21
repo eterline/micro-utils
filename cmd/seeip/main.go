@@ -36,10 +36,9 @@ func main() {
 		microutils.PrintFatalErr(err)
 	}
 
-	// TODO: correct sql request
-	// storeIP, err := ipDataAdapters.NewIpInfoSqlite(context.Background(), "./seeip.db")
+	// storeIP, err := ipDataAdapters.NewIpInfoStarskey(context.Background(), "./seeip.db")
 	// if err != nil {
-	// 	microutils.PrintFatalErr(err)
+	// 	microutils.PrintErr(err)
 	// }
 
 	rslv, err := selectResolver(cfg.ResolverService)
@@ -48,6 +47,7 @@ func main() {
 	}
 
 	resumer := ipDataAdapters.NewExternalApi()
+
 	scr := ipDataService.NewNetworkScrapeService(cfg.Workers, rslv, resumer, nil)
 
 	resolvs, err := scr.ResolveDNS(context.Background(), cfg.Address)

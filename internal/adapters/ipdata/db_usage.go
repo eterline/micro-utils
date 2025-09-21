@@ -7,6 +7,8 @@ package ipdata
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -14,6 +16,11 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/eterline/micro-utils/internal/models"
+	"github.com/starskey-io/starskey"
+)
+
+const (
+	maxCacheAge = 30 * time.Minute
 )
 
 type IpInfoSqlite struct {
@@ -151,8 +158,7 @@ func (d *IpInfoSqlite) Save(ctx context.Context, ip net.IP, obj models.AboutIPob
 
 func (d *IpInfoSqlite) Get(ctx context.Context, ip net.IP) (*models.AboutIPobject, error) {
 	now := time.Now().Unix()
-	maxAge := 30 * time.Minute
-	row := d.getPrep.QueryRowContext(ctx, ip, now, maxAge.Seconds())
+	row := d.getPrep.QueryRowContext(ctx, ip, now, maxCacheAge.Seconds())
 
 	var ipNew net.IP = ip
 
@@ -172,4 +178,91 @@ func (d *IpInfoSqlite) Get(ctx context.Context, ip net.IP) (*models.AboutIPobjec
 	}
 
 	return obj, nil
+}
+
+type IpInfoStarskey struct {
+	db *starskey.Starskey
+}
+
+func NewIpInfoStarskey(ctx context.Context, db string) (*IpInfoStarskey, error) {
+
+	stubLogCh := make(chan string)
+
+	go func() {
+		for range stubLogCh {
+		}
+	}()
+
+	skey, err := starskey.Open(&starskey.Config{
+		Permission:        0755,
+		Directory:         db,
+		FlushThreshold:    (1024 * 1024) * 64,
+		MaxLevel:          3,
+		SizeFactor:        10,
+		BloomFilter:       false,
+		SuRF:              false,
+		Logging:           false,
+		CompressionOption: starskey.NoCompression,
+		Optional: &starskey.OptionalConfig{
+			LogChannel: stubLogCh,
+		},
+	})
+
+	if ctx.Err() != nil {
+		return nil, fmt.Errorf("failed to init cache: %w", err)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to init cache: %w", err)
+	}
+
+	go func() {
+		<-ctx.Done()
+		skey.Close()
+		close(stubLogCh)
+	}()
+
+	self := &IpInfoStarskey{db: skey}
+
+	return self, nil
+}
+
+func (d *IpInfoStarskey) Get(ctx context.Context, ip net.IP) (*models.AboutIPobject, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	payload, err := d.db.Get(ip)
+	if err != nil {
+		return nil, err
+	}
+
+	obj := &models.AboutIPobject{}
+	if err := json.Unmarshal(payload, obj); err != nil {
+		return nil, err
+	}
+
+	expireTime := obj.RequestTime.Add(maxCacheAge)
+	if time.Now().After(expireTime) {
+		return nil, nil
+	}
+
+	return obj, err
+}
+
+func (d *IpInfoStarskey) Save(ctx context.Context, ip net.IP, obj models.AboutIPobject) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	if ip == nil {
+		return errors.New("ip is nil")
+	}
+
+	payload, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+
+	return d.db.Put(ip, payload)
 }
