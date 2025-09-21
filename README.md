@@ -150,6 +150,30 @@ Later...
 ### uuid:
 Later...
 
+```
+Usage: uuid [--count COUNT] [--payload PAYLOAD] [--domain DOMAIN] [--version VERSION]
+
+Options:
+  --count COUNT, -c     UUID v4 count to generate [default: 1]
+  --payload PAYLOAD, -p UUID hashed payload
+  --domain DOMAIN, -d   UUID domain namespace [default: dns]
+  --version VERSION, -v UUID version 3 or 5 [default: 3]
+  --help, -h            display this help and exit
+```
+
+Exampled output:
+```
+# generates 2 UUID
+user@host~#  uuid -c 2
+- 457cbded-2561-4b17-a96f-d3fc98b46408
+- 336b31e8-2b7a-4f8c-b8fd-194388c5f100
+
+# generates 1 UUID from file
+user@host~# uuid -p .bashrc
+- 05045efe-5934-3ef3-b4f7-a7457c5908c
+```
+  !Don't support pipeline now
+
 ## License
 
 [MIT](https://choosealicense.com/licenses/mit/)
