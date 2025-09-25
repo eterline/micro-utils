@@ -189,17 +189,26 @@ type RemoteResolve struct {
 	dnsSocket string
 }
 
-func NewRemoteResolver(dns string) RemoteResolve {
-	return RemoteResolve{
-		dnsSocket: dns,
+func checkDNSsrv(socket string) string {
+	host, port, err := net.SplitHostPort(socket)
+	if err != nil {
+		return net.JoinHostPort(socket, "53")
 	}
+	return net.JoinHostPort(host, port)
 }
 
-func (rs RemoteResolve) ResolveIP(ctx context.Context, s string) ([]net.IP, error) {
+func NewRemoteResolver(dns string) (*RemoteResolve, error) {
+	return &RemoteResolve{
+		dnsSocket: checkDNSsrv(dns),
+	}, nil
+}
+
+func (rs *RemoteResolve) ResolveIP(ctx context.Context, s string) ([]net.IP, error) {
+
 	var (
 		fqdn = dns.Fqdn(s)
-		ips  = []net.IP{}
-		errs = []error{}
+		ips  []net.IP
+		errs []error
 		mu   sync.Mutex
 		wg   sync.WaitGroup
 	)
@@ -246,7 +255,7 @@ func (rs RemoteResolve) ResolveIP(ctx context.Context, s string) ([]net.IP, erro
 	return nil, fmt.Errorf("no IP resolved for %s", s)
 }
 
-func (rs RemoteResolve) ResolveNS(ctx context.Context, s string) ([]string, error) {
+func (rs *RemoteResolve) ResolveNS(ctx context.Context, s string) ([]string, error) {
 	resMsg := dns.Msg{}
 	fqdn := dns.Fqdn(s)
 

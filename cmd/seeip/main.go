@@ -86,7 +86,7 @@ func selectResolver(name string) (models.Resolver, error) {
 		return ipDataAdapters.NewLocalResolver(), nil
 
 	case microutils.IsAddressString(name):
-		return ipDataAdapters.NewRemoteResolver(name), nil
+		return ipDataAdapters.NewRemoteResolver(name)
 
 	default:
 		return nil, errors.New("unknown DNS resolver name")
