@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 
 	doh "github.com/eterline/micro-utils/pkg/DoH"
 	dns "github.com/miekg/dns"
@@ -195,36 +196,44 @@ func NewRemoteResolver(dns string) RemoteResolve {
 }
 
 func (rs RemoteResolve) ResolveIP(ctx context.Context, s string) ([]net.IP, error) {
+	var (
+		fqdn = dns.Fqdn(s)
+		ips  = []net.IP{}
+		errs = []error{}
+		mu   sync.Mutex
+		wg   sync.WaitGroup
+	)
 
-	var ips []net.IP
-	var errs []error
+	query := func(qtype uint16) {
+		defer wg.Done()
+		msg := new(dns.Msg)
+		msg.SetQuestion(fqdn, qtype)
 
-	resMsg := dns.Msg{}
-	fqdn := dns.Fqdn(s)
+		res, err := dns.ExchangeContext(ctx, msg, rs.dnsSocket)
+		if err != nil {
+			mu.Lock()
+			errs = append(errs, err)
+			mu.Unlock()
+			return
+		}
 
-	resMsg.SetQuestion(fqdn, dns.TypeA)
-	resA, errA := dns.ExchangeContext(ctx, &resMsg, rs.dnsSocket)
-	if errA == nil {
-		for _, ans := range resA.Answer {
-			if a, ok := ans.(*dns.A); ok {
-				ips = append(ips, a.A)
+		mu.Lock()
+		defer mu.Unlock()
+
+		for _, ans := range res.Answer {
+			switch rr := ans.(type) {
+			case *dns.A:
+				ips = append(ips, rr.A)
+			case *dns.AAAA:
+				ips = append(ips, rr.AAAA)
 			}
 		}
-	} else {
-		errs = append(errs, errA)
 	}
 
-	resMsg.SetQuestion(fqdn, dns.TypeA)
-	resAAAA, errAAAA := dns.ExchangeContext(ctx, &resMsg, rs.dnsSocket)
-	if errAAAA == nil {
-		for _, ans := range resAAAA.Answer {
-			if a, ok := ans.(*dns.A); ok {
-				ips = append(ips, a.A)
-			}
-		}
-	} else {
-		errs = append(errs, errAAAA)
-	}
+	wg.Add(2)
+	go query(dns.TypeA)
+	go query(dns.TypeAAAA)
+	wg.Wait()
 
 	if len(ips) > 0 {
 		return ips, nil
