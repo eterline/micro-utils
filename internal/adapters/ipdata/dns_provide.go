@@ -14,17 +14,31 @@ import (
 	dns "github.com/miekg/dns"
 )
 
-type CloudflareResolve struct {
-	rs *doh.DnsDoHProvider
+type DoHqueryService interface {
+	Query(ctx context.Context, d doh.Domain, t doh.Record) (doh.DnsResponse, error)
+	Service() string
 }
 
-func NewCloudflareResolver() CloudflareResolve {
-	return CloudflareResolve{
+// DoHResolve - DNS over HTTP/s adapter type
+type DoHResolve struct {
+	rs DoHqueryService
+}
+
+// NewCloudflareResolver - cloudflare DNS over HTTP/s
+func NewCloudflareResolver() *DoHResolve {
+	return &DoHResolve{
 		rs: doh.InitDnsCloudflareProvider(),
 	}
 }
 
-func (rs CloudflareResolve) ResolveIP(ctx context.Context, s string) ([]net.IP, error) {
+// NewGoogleResolver - google DNS over HTTP/s
+func NewGoogleResolver() *DoHResolve {
+	return &DoHResolve{
+		rs: doh.InitDnsCloudflareProvider(),
+	}
+}
+
+func (rs *DoHResolve) ResolveIP(ctx context.Context, s string) ([]net.IP, error) {
 
 	var ips []net.IP
 	var errs []error
@@ -63,7 +77,7 @@ func (rs CloudflareResolve) ResolveIP(ctx context.Context, s string) ([]net.IP, 
 
 }
 
-func (rs CloudflareResolve) ResolveNS(ctx context.Context, s string) ([]string, error) {
+func (rs *DoHResolve) ResolveNS(ctx context.Context, s string) ([]string, error) {
 	res, err := rs.rs.Query(ctx, doh.Domain(s), doh.TypeNS)
 	if err != nil {
 		return nil, err
@@ -77,69 +91,9 @@ func (rs CloudflareResolve) ResolveNS(ctx context.Context, s string) ([]string, 
 	return nss, nil
 }
 
-type GoogleResolve struct {
-	rs *doh.DnsDoHProvider
-}
+// =======================================
 
-func NewGoogleResolver() GoogleResolve {
-	return GoogleResolve{
-		rs: doh.InitDnsCloudflareProvider(),
-	}
-}
-
-func (rs GoogleResolve) ResolveIP(ctx context.Context, s string) ([]net.IP, error) {
-
-	var ips []net.IP
-	var errs []error
-
-	resA, errA := rs.rs.Query(ctx, doh.Domain(s), doh.TypeA)
-	if errA == nil && resA.Status == doh.NOERROR {
-		for _, ans := range resA.Answer {
-			if ip := net.ParseIP(ans.Data); ip != nil {
-				ips = append(ips, ip)
-			}
-		}
-	} else if errA != nil {
-		errs = append(errs, fmt.Errorf("A query failed: %w", errA))
-	} else {
-		errs = append(errs, fmt.Errorf("A query returned status %v", resA.Status))
-	}
-
-	resAAAA, errAAAA := rs.rs.Query(ctx, doh.Domain(s), doh.TypeAAAA)
-	if errAAAA == nil && resAAAA.Status == doh.NOERROR {
-		for _, ans := range resAAAA.Answer {
-			if ip := net.ParseIP(ans.Data); ip != nil {
-				ips = append(ips, ip)
-			}
-		}
-	} else if errAAAA != nil {
-		errs = append(errs, fmt.Errorf("AAAA query failed: %w", errAAAA))
-	} else {
-		errs = append(errs, fmt.Errorf("AAAA query returned status %v", resAAAA.Status))
-	}
-
-	if len(ips) > 0 {
-		return ips, nil
-	}
-
-	return nil, fmt.Errorf("no IP resolved for %s: %v", s, errs)
-
-}
-
-func (rs GoogleResolve) ResolveNS(ctx context.Context, s string) ([]string, error) {
-	res, err := rs.rs.Query(ctx, doh.Domain(s), doh.TypeNS)
-	if err != nil {
-		return nil, err
-	}
-
-	var nss []string
-	for _, ans := range res.Answer {
-		nss = append(nss, ans.Data)
-	}
-
-	return nss, nil
-}
-
+// LocalResolve - use localhost or system DNS server as IP resolve server
 type LocalResolve struct{}
 
 func NewLocalResolver() LocalResolve {
@@ -185,11 +139,12 @@ func (rs LocalResolve) ResolveNS(ctx context.Context, s string) ([]string, error
 	return nssL, nil
 }
 
+// LocalResolve - use certain DNS server as IP resolve server.
 type RemoteResolve struct {
 	dnsSocket string
 }
 
-func checkDNSsrv(socket string) string {
+func correctDNSsrv(socket string) string {
 	host, port, err := net.SplitHostPort(socket)
 	if err != nil {
 		return net.JoinHostPort(socket, "53")
@@ -197,9 +152,20 @@ func checkDNSsrv(socket string) string {
 	return net.JoinHostPort(host, port)
 }
 
-func NewRemoteResolver(dns string) (*RemoteResolve, error) {
+func NewRemoteResolver(socket string) (*RemoteResolve, error) {
+	// check DNS socket string.
+	// replace empty port with :53 as DNS default port.
+	//	"8.8.8.8" -> "8.8.8.8:53"
+	//	"10.192.0.33:7890" - use as it is
+	host, port, err := net.SplitHostPort(socket)
+	if err != nil {
+		socket = net.JoinHostPort(socket, "53")
+	} else {
+		socket = net.JoinHostPort(host, port)
+	}
+
 	return &RemoteResolve{
-		dnsSocket: checkDNSsrv(dns),
+		dnsSocket: correctDNSsrv(socket),
 	}, nil
 }
 
@@ -240,8 +206,8 @@ func (rs *RemoteResolve) ResolveIP(ctx context.Context, s string) ([]net.IP, err
 	}
 
 	wg.Add(2)
-	go query(dns.TypeA)
-	go query(dns.TypeAAAA)
+	go query(dns.TypeA)    // request for IPv4
+	go query(dns.TypeAAAA) // request for IPv6
 	wg.Wait()
 
 	if len(ips) > 0 {

@@ -23,6 +23,8 @@ const (
 	maxCacheAge = 30 * time.Minute
 )
 
+// IpInfoSqlite - use as SQLite cache for IP requests
+// work in process on that. Maybe won't use
 type IpInfoSqlite struct {
 	db       *sql.DB
 	savePrep *sql.Stmt
