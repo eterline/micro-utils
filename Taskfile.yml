@@ -1,0 +1,43 @@
+version: '3'
+
+vars:
+    GO_FLAGS: "-s -w"
+    TARGETS: [filehash, gpufo, seeip, uuid]
+
+tasks:
+    show-dir:
+        cmds:
+            - pwd
+
+    clear:
+        cmds:
+            - go mod tidy
+            - go clean
+
+    build-windows:
+        shell: bash
+        cmds:
+            - rm -rf ./build/windows
+            - mkdir ./build/windows
+            - for: {var: TARGETS}
+              cmd: |
+                GOOS=windows 
+                go build -ldflags="{{.GO_FLAGS}}" -o "./build/windows/{{.ITEM}}.exe" -v "./cmd/{{.ITEM}}/main.go"
+                echo "Windows - finish  building: {{.ITEM}}"
+
+    build-linux:
+        shell: bash
+        cmds:
+            - rm -rf ./build/linux
+            - mkdir ./build/linux
+            - for: {var: TARGETS}
+              cmd: |
+                GOOS=linux 
+                go build -ldflags="{{.GO_FLAGS}}" -o "./build/linux/{{.ITEM}}" -v "./cmd/{{.ITEM}}/main.go"
+                echo "Linux - finish building: {{.ITEM}}"
+
+    build:
+        deps: [clear]
+        cmds:
+            - task: build-linux
+            - task: build-windows

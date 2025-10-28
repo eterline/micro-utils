@@ -10,14 +10,19 @@ Use for:
 
 ## Build
 
-To build project in full prod variant
+To build project for *All*
 ```
-make build-prod
+task -t Taskfile.yml build
 ```
 
-for testing build
+To build project for *Windows*
 ```
-make build
+task -t Taskfile.yml build-windows
+```
+
+To build project for *Linux*
+```
+task -t Taskfile.yml build-linux
 ```
 
 All binariaes will be in './build' folder at repository
