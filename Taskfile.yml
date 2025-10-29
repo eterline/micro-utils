@@ -2,7 +2,9 @@ version: '3'
 
 vars:
     GO_FLAGS: "-s -w"
-    TARGETS: [filehash, gpufo, seeip, uuid]
+    TARGETS: [filehash, seeip, uuid, ips2subnets]
+    TEST_TARGETS: [ips2subnets]
+    TEST_OS: "windows"
 
 tasks:
     show-dir:
@@ -13,6 +15,18 @@ tasks:
         cmds:
             - go mod tidy
             - go clean
+            - rm -rf ./build
+            - mkdir ./build
+
+    test-build:
+        cmds:
+            - rm -rf ./build/test
+            - mkdir ./build/test
+            - for: {var: TEST_TARGETS}
+              cmd: |
+                GOOS={{.TEST_OS}}
+                go build -o "./build/test/{{.ITEM}}{{if eq .TEST_OS "windows"}}.exe{{end}}" -v "./cmd/{{.ITEM}}/main.go"
+                echo "Test Build - finish building: {{.ITEM}}"
 
     build-windows:
         shell: bash

@@ -36,11 +36,6 @@ func main() {
 		microutils.PrintFatalErr(err)
 	}
 
-	// storeIP, err := ipDataAdapters.NewIpInfoStarskey(context.Background(), "./seeip.db")
-	// if err != nil {
-	// 	microutils.PrintErr(err)
-	// }
-
 	rslv, err := selectResolver(cfg.ResolverService)
 	if err != nil {
 		microutils.PrintFatalErr(err)
