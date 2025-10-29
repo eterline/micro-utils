@@ -17,7 +17,7 @@ var (
 			Addrs:     []string{},
 			OutFile:   "",
 			InputFile: "",
-			Separator: "\n",
+			Separator: "\\n",
 		},
 		Name: "seeip",
 	}

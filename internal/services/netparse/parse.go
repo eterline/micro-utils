@@ -12,6 +12,18 @@ import (
 	"github.com/eterline/micro-utils/pkg/netipuse"
 )
 
+func unescapeString(s string) string {
+	replacer := strings.NewReplacer(
+		`\\`, `\`,
+		`\n`, "\n",
+		`\t`, "\t",
+		`\r`, "\r",
+		`\f`, "\f",
+		`\v`, "\v",
+	)
+	return replacer.Replace(s)
+}
+
 type netParser struct {
 	setV6 *netipuse.PoolIPBuilder
 	setV4 *netipuse.PoolIPBuilder
@@ -74,7 +86,7 @@ func (p *netParser) ParseFromFile(file, sep string) (error, bool) {
 	var (
 		added   = 0
 		fRd     = bufio.NewReader(f)
-		byteSep = []byte(sep)[0]
+		byteSep = []byte(unescapeString(sep))[0]
 	)
 
 	for {

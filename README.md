@@ -153,7 +153,7 @@ Later...
 Later...
 
 ### uuid:
-Later...
+Tool for generation UUIDS
 
 ```
 Usage: uuid [--count COUNT] [--payload PAYLOAD] [--domain DOMAIN] [--version VERSION]
@@ -169,7 +169,7 @@ Options:
 Exampled output:
 ```
 # generates 2 UUID
-user@host~#  uuid -c 2
+user@host~# uuid -c 2
 - 457cbded-2561-4b17-a96f-d3fc98b46408
 - 336b31e8-2b7a-4f8c-b8fd-194388c5f100
 
@@ -178,6 +178,27 @@ user@host~# uuid -p .bashrc
 - 05045efe-5934-3ef3-b4f7-a7457c5908c
 ```
   !Don't support pipeline now
+
+### ips2subnets:
+Tool for assembly ips to subnets lists into Stdout or file
+
+```
+ips2subnets.exe -h
+Usage: seeip [--addrs ADDRS] [--out OUT] [--in IN] [--sep SEP]
+
+Options:
+  --addrs ADDRS, -a ADDRS IP addresses or subnets to parse. [default: []]
+  --out OUT, -o OUT       Output file with subnets.
+  --in IN, -i IN          Input file with ip addresses.
+  --sep SEP, -s SEP       Output file separator. [default: "\n"]
+  --help, -h              display this help and exit
+```
+
+```
+user@host~# ips2subnets -a 10.192.0.1 10.192.0.0
+10.192.0.0/31
+```
+
 
 ## License
 
